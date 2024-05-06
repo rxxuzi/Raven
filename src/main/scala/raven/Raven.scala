@@ -5,7 +5,7 @@ import raven.io.*
 import org.jsoup.Jsoup
 import org.jsoup.nodes.{Document, Element}
 import org.jsoup.select.Elements
-
+import util.Elem
 import java.net.URL
 
 /**
@@ -23,7 +23,7 @@ class Raven(val url : URL, val html: String) {
   }
   val doc : Document = Jsoup.parse(html)
 
-  private def get(query: String, by: By): Elements = {
+  def get(query: String, by: By, doc : Document): Elements = {
     by match {
       case By.TAG => doc.getElementsByTag(query)
       case By.CLASS => doc.getElementsByClass(query)
@@ -36,13 +36,19 @@ class Raven(val url : URL, val html: String) {
     }
   }
 
+  def get(query: String, by: By): Elements = get(query, by, this.doc)
+  def get(query: String, by: By, elements: Elements): Elements = {
+    val doc = Jsoup.parse(elements.html)
+    get(query, by, doc)
+  }
+
   def getAllImages: List[Img] = {
     val images: Elements = doc.select("img")
     images.toArray.map(_.asInstanceOf[Element]).map(new Img(url,_)).toList
   }
 
   def getImages(query: String, by: By): List[Img] = {
-    val images = get("img " + query, by)
+    val images = get("img", By.TAG, get(query, by))
     images.toArray.map(_.asInstanceOf[Element]).map(new Img(url, _)).toList
   }
 
@@ -51,22 +57,29 @@ class Raven(val url : URL, val html: String) {
     videos.toArray.map(_.asInstanceOf[Element]).map(new Vid(url, _)).toList
   }
 
+  def getVideos(query: String, by: By): List[Vid] = {
+    val videos = get("video", By.TAG, get(query, by))
+    videos.toArray.map(_.asInstanceOf[Element]).map(new Vid(url, _)).toList
+  }
+
   def getAllAudio: List[Aud] = {
     val audios: Elements = doc.select("audio")
     audios.toArray.map(_.asInstanceOf[Element]).map(new Aud(url, _)).toList
   }
 
+  def getAudios(query: String, by: By): List[Aud] = {
+    val audios = get("audio", By.TAG, get(query, by))
+    audios.toArray.map(_.asInstanceOf[Element]).map(new Aud(url, _)).toList
+  }
+
   def getAllURL: List[URL] = {
     val links: Elements = doc.select("a")
-    val urls = links.toArray.map(_.asInstanceOf[Element]).flatMap { link =>
-      val href = link.attr("href")
-      href match {
-        case href if href.startsWith("http") => Some(new URL(href))
-        case href if href.nonEmpty => Some(new URL(url, href))
-        case _ => None
-      }
-    }.toSet
-    urls.toList
+    Elem.extractUrlsFromLinks(url, links)
+  }
+
+  def getURLs(query: String, by: By): List[URL] = {
+    val links = get("a", By.TAG, get(query, by))
+    Elem.extractUrlsFromLinks(url, links)
   }
 
   def save(path : String) : Unit = {
