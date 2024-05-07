@@ -4,22 +4,14 @@ import org.jsoup.nodes.Element
 import raven.io.Downloader
 import scala.jdk.CollectionConverters._
 import java.net.URL
+import raven.util.Elem
 
 trait Media {
   val baseurl: URL
   val element: Element
-  val staticDomain: String = s"${baseurl.getProtocol}://${baseurl.getHost}"
-  val isStatic: Boolean = element.attr("src").startsWith("http")
-  val src: String = {
-    val rawSrc = element.attr("src")
-    if (rawSrc.startsWith("http")) {
-      rawSrc
-    } else if (rawSrc.startsWith("//")) {
-      s"${baseurl.getProtocol}:$rawSrc"
-    } else {
-      staticDomain + rawSrc
-    }
-  }
+  val staticDomain: String = Elem.getStaticResources(baseurl)
+  val isStatic: Boolean = Elem.isStaticResource(element)
+  val src: String = Elem.fullURL(baseurl, element).get.toString
   val downloader = new Downloader(src)
   val classSet : Set[String] = element.classNames().asScala.toSet
   val id : String = element.id()
