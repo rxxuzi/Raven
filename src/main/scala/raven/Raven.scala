@@ -5,8 +5,10 @@ import raven.io.*
 import org.jsoup.Jsoup
 import org.jsoup.nodes.{Document, Element}
 import org.jsoup.select.Elements
+import raven.html.JS
 import util.Elem
 import java.net.URL
+import scala.collection.mutable.ListBuffer
 
 /**
  * <h1>Raven</h1>
@@ -17,10 +19,11 @@ import java.net.URL
  * @param html HTML of the page
  * @author rxxuzi
  */
-class Raven(val url : URL, val html: String) {
+class Raven(val url : URL, val html: String, origin : Boolean = true) {
   def this(url: URL) = {
     this(url, OpenHTML(url))
   }
+  
   val doc : Document = Jsoup.parse(html)
 
   def get(query: String, by: By, doc : Document): Elements = {
@@ -90,7 +93,7 @@ class Raven(val url : URL, val html: String) {
   def snippet(name : String , by : By) : Raven = {
     val body = doc.body
     val elements = get(name, by)
-    new Raven(url, elements.html())
+    new Raven(url, elements.html(), origin = false)
   }
 
   def cut(name: String, by: By): Unit = {
@@ -107,6 +110,21 @@ class Raven(val url : URL, val html: String) {
     elements.toArray.map(_.asInstanceOf[Element]).toList
   }
 
+  def js(): List[JS] = {
+    val scripts: Elements = get("script", By.TAG)
+    val js = ListBuffer[JS]()
+
+    scripts.forEach { element =>
+      if (Elem.containsResourceAttr(element)) {
+        js += JS(url, element, isExternal = true)
+      } else if (element.data().nonEmpty) {
+        js += JS(url, element, isExternal = false)
+      }
+    }
+
+    js.toList
+  }
+
   def cache() : Cache = Cache(this)
 
   override def toString: String = s"Raven($url)"
@@ -115,4 +133,5 @@ class Raven(val url : URL, val html: String) {
 object Raven {
   def apply(url : URL) = new Raven(url)
   def apply(url : String) = new Raven(new URL(url))
+  def apply(url : URL, html : String) = new Raven(url, html)
 }
