@@ -1,15 +1,16 @@
 package raven
 
-import raven.element.*
-import raven.io.*
 import org.jsoup.Jsoup
 import org.jsoup.nodes.{Document, Element}
 import org.jsoup.select.Elements
+import raven.element.*
 import raven.html.JS
-import util.Elem
+import raven.io.*
+import raven.util.Elem
+
 import java.net.URL
 import scala.collection.mutable.ListBuffer
-
+import scala.jdk.CollectionConverters.*
 /**
  * <h1>Raven</h1>
  * This class serves as an entry point for parsing HTML content and supports various operations
@@ -51,8 +52,9 @@ final class Raven(val url : URL, val html: String, origin : Boolean = true) {
   }
 
   def getImages(query: String, by: By): List[Img] = {
-    val images = get("img", By.TAG, get(query, by))
-    images.toArray.map(_.asInstanceOf[Element]).map(new Img(url, _)).toList
+    val elements = get(query, by)
+    val imgElements = if (elements.isEmpty) doc.select("img") else elements.select("img")
+    imgElements.asScala.map(new Img(url, _)).toList
   }
 
   def getAllVideo: List[Vid] = {
