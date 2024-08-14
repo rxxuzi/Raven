@@ -19,7 +19,7 @@ import scala.collection.mutable.ListBuffer
  * @param html HTML of the page
  * @author rxxuzi
  */
-class Raven(val url : URL, val html: String, origin : Boolean = true) {
+final class Raven(val url : URL, val html: String, origin : Boolean = true) {
   def this(url: URL) = {
     this(url, OpenHTML(url))
   }
@@ -81,8 +81,12 @@ class Raven(val url : URL, val html: String, origin : Boolean = true) {
   }
 
   def getURLs(query: String, by: By): List[URL] = {
-    val links = get("a", By.TAG, get(query, by))
-    Elem.extractUrlsFromLinks(url, links)
+    val links = get(query, by).select("a")
+
+    links.toArray.map(_.asInstanceOf[Element]).flatMap { link =>
+      val href = link.attr("href")
+      Elem.fullURL(this.url, href)
+    }.toList
   }
 
   def save(path : String) : Unit = {
@@ -110,6 +114,10 @@ class Raven(val url : URL, val html: String, origin : Boolean = true) {
     elements.toArray.map(_.asInstanceOf[Element]).toList
   }
 
+  def text(): String = {
+    doc.text()
+  }
+  
   def js(): List[JS] = {
     val scripts: Elements = get("script", By.TAG)
     val js = ListBuffer[JS]()

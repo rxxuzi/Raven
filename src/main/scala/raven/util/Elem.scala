@@ -43,24 +43,14 @@ object Elem {
       new URL(res, targetString)
     }
   }
-
+  
   def fullURL(origin: URL, target: String): Option[URL] = {
-    val res = getStaticURL(origin)
     try {
-      val url = {
-        if (target.startsWith("//")) {
-          new URL(s"${res.getProtocol}:$target")
-        } else if (target.startsWith("http")) {
-          new URL(target)
-        } else {
-          new URL(res, target)
-        }
-      }
+      val url = new URL(origin, target)
       Some(url)
     } catch {
       case e: Exception => None
     }
-
   }
 
   /**
